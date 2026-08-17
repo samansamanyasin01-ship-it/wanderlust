@@ -9,7 +9,7 @@ import {
   updatePostHandler,
 } from '../../../controllers/posts-controller.js';
 import Post from '../../../models/post.js';
-import { expect, jest, it, describe } from '@jest/globals';
+import { expect, jest, it, describe, beforeEach } from '@jest/globals';
 import { validCategories, HTTP_STATUS, RESPONSE_MESSAGES } from '../../../utils/constants.js';
 import { createPostObject, createRequestObject, res } from '../../utils/helper-objects.js';
 
@@ -19,6 +19,10 @@ jest.mock('../../../models/post.js', () => ({
 }));
 
 describe('createPostHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Post creation: Success - All fields are valid', async () => {
     const postObject = createPostObject();
     const req: any = createRequestObject({ body: postObject });
@@ -35,7 +39,7 @@ describe('createPostHandler', () => {
 
   it('Post creation: Failure - Invalid image url', async () => {
     const postObject = createPostObject({
-      imageLink: 'https://www.forTestingPurposeOnly/my-image.gif', // Invalid image URL
+      imageLink: 'https://www.forTestingPurposeOnly/my-image.gif',
     });
     const req: any = createRequestObject({ body: postObject });
 
@@ -62,7 +66,7 @@ describe('createPostHandler', () => {
 
   it('Post creation: Failure - Too Many Categories', async () => {
     const postObject = createPostObject({
-      categories: [validCategories[0], validCategories[1], validCategories[2], validCategories[3]], // 4 categories
+      categories: [validCategories[0], validCategories[1], validCategories[2], validCategories[3]],
     });
     const req: any = createRequestObject({ body: postObject });
 
@@ -78,7 +82,7 @@ describe('createPostHandler', () => {
     const postObject = createPostObject();
     const req: any = createRequestObject({ body: postObject });
 
-    jest.spyOn(Post.prototype, 'save').mockImplementationOnce(() => Promise.resolve(postObject));
+    jest.spyOn(Post.prototype, 'save').mockRejectedValueOnce(new Error('Database error'));
 
     await createPostHandler(req, res);
 
@@ -90,6 +94,10 @@ describe('createPostHandler', () => {
 });
 
 describe('getAllPostsHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Get all posts: Success - Retrieving all posts list', async () => {
     const req: any = createRequestObject();
 
@@ -122,6 +130,10 @@ describe('getAllPostsHandler', () => {
 });
 
 describe('getFeaturedPostsHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Get featured posts: Success - Retrieving all featured posts list', async () => {
     const req: any = createRequestObject();
 
@@ -154,6 +166,10 @@ describe('getFeaturedPostsHandler', () => {
 });
 
 describe('getPostByCategoryHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Get posts by category: Success - Retrieving posts list of specified category', async () => {
     const req: any = createRequestObject({ params: { category: validCategories[1] } });
 
@@ -197,6 +213,10 @@ describe('getPostByCategoryHandler', () => {
 });
 
 describe('getLatestPostsHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Get latest posts: Success - Retrieving most recent posts list', async () => {
     const req: any = createRequestObject();
 
@@ -231,12 +251,15 @@ describe('getLatestPostsHandler', () => {
 });
 
 describe('getPostByIdHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Get post by ID: Success - Retrieving Specific Post', async () => {
     const req: any = createRequestObject({ params: { id: '6910293383' } });
-
     const mockPost: any = createPostObject({ _id: '6910293383' });
 
-    jest.spyOn(Post, 'find').mockResolvedValueOnce(mockPost);
+    jest.spyOn(Post, 'findById').mockResolvedValueOnce(mockPost);
 
     await getPostByIdHandler(req, res);
 
@@ -247,11 +270,11 @@ describe('getPostByIdHandler', () => {
   it('Get post by ID: Failure - Post not found (Specified post ID is invalid)', async () => {
     const req: any = createRequestObject({ params: { id: '6910293383' } });
 
-    jest.spyOn(Post, 'findById').mockResolvedValue(null);
+    jest.spyOn(Post, 'findById').mockResolvedValueOnce(null);
 
     await getPostByIdHandler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
     expect(res.json).toHaveBeenCalledWith({ message: RESPONSE_MESSAGES.POSTS.NOT_FOUND });
   });
 
@@ -272,6 +295,10 @@ describe('getPostByIdHandler', () => {
 });
 
 describe('updatePostHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Update post: Success - Modifying post content', async () => {
     const req: any = createRequestObject({
       params: { id: '6910293383' },
@@ -280,7 +307,6 @@ describe('updatePostHandler', () => {
 
     const mockPost = createPostObject({ _id: '6910293383', title: 'Updated Post' });
 
-    // Mock the behavior of Post.findByIdAndUpdate
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValueOnce(mockPost);
 
     await updatePostHandler(req, res);
@@ -295,12 +321,11 @@ describe('updatePostHandler', () => {
       body: { title: 'Updated Post' },
     });
 
-    // Mock the behavior of Post.findByIdAndUpdate
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValueOnce(null);
 
     await updatePostHandler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
     expect(res.json).toHaveBeenCalledWith({ message: RESPONSE_MESSAGES.POSTS.NOT_FOUND });
   });
 
@@ -309,10 +334,11 @@ describe('updatePostHandler', () => {
       params: { id: '6910293383' },
       body: { title: 'Updated Post' },
     });
-    // Mock the behavior of Post.findByIdAndUpdate
+
     jest
       .spyOn(Post, 'findByIdAndUpdate')
       .mockRejectedValueOnce(new Error(RESPONSE_MESSAGES.COMMON.INTERNAL_SERVER_ERROR));
+
     await updatePostHandler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.INTERNAL_SERVER_ERROR);
@@ -323,12 +349,14 @@ describe('updatePostHandler', () => {
 });
 
 describe('deletePostByIdHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('Delete Post: Success - Removing Post with specified ID', async () => {
     const req: any = createRequestObject({ params: { id: '6910293383' } });
-
     const mockPost = createPostObject({ _id: '6910293383' });
 
-    // Mock the behavior of Post.findByIdAndRemove
     jest.spyOn(Post, 'findByIdAndDelete').mockResolvedValueOnce(mockPost);
 
     await deletePostByIdHandler(req, res);
@@ -342,22 +370,17 @@ describe('deletePostByIdHandler', () => {
   it('Delete Post: Failure - Post not found (Specified post ID is invalid)', async () => {
     const req: any = createRequestObject({ params: { id: '6910293383' } });
 
-    // Mock the behavior of Post.findByIdAndRemove
-
-    jest
-      .spyOn(Post, 'findByIdAndDelete')
-      .mockRejectedValueOnce(new Error(RESPONSE_MESSAGES.COMMON.INTERNAL_SERVER_ERROR));
+    jest.spyOn(Post, 'findByIdAndDelete').mockResolvedValueOnce(null);
 
     await deletePostByIdHandler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.status).toHaveBeenCalledWith(HTTP_STATUS.NOT_FOUND);
     expect(res.json).toHaveBeenCalledWith({ message: RESPONSE_MESSAGES.POSTS.NOT_FOUND });
   });
 
   it('Delete Post: Failure - Internal Server Error', async () => {
     const req: any = createRequestObject({ params: { id: '6910293383' } });
 
-    // Mock the behavior of Post.findByIdAndRemove
     jest
       .spyOn(Post, 'findByIdAndDelete')
       .mockRejectedValueOnce(new Error(RESPONSE_MESSAGES.COMMON.INTERNAL_SERVER_ERROR));
