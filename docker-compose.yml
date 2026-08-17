@@ -1,0 +1,56 @@
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: wanderlust_mongo_c
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]  
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s  
+
+  redis:
+    image: redis:alpine
+    container_name: wanderlust_redis_c
+    ports:
+      - "6379:6379"
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+  
+  frontend:
+    image: wanderlust_frontend:latest   
+    container_name: wanderlust_frontend_c    
+    ports:
+      - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+          
+      redis:
+        condition: service_healthy
+
+    restart: always
+volumes:
+  mongo_data:
+
+
+
+
+
+
+
+
+
